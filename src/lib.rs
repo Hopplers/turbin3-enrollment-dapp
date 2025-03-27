@@ -1,10 +1,13 @@
+mod programs;
+
 #[cfg(test)] mod tests {
-    use solana_sdk::{message::Message,signature::{Keypair, Signer, read_keypair_file}, transaction::Transaction};
+    use solana_sdk::{message::Message, signature::{read_keypair_file, Keypair, Signer}, system_program, transaction::Transaction};
     use::bs58;
     use std::io::{self, BufRead};
     use std::str::FromStr;
     use solana_client::rpc_client::RpcClient;
     use solana_program::{pubkey::Pubkey,system_instruction::transfer, hash::hash}; 
+    use crate::programs::Turbin3_prereq::{TurbinePrereqProgram, CompleteArgs, UpdateArgs};
 
     const RPC_URL: &str = "https://api.devnet.solana.com";
 
@@ -125,5 +128,39 @@
         // Print transaction 
         println!("Success! Check out your TX here: https://explorer.solana.com/tx/{}/?cluster=devnet",signature);
 
+    }
+
+    #[test]
+    fn enroll () {
+        // Create a Solana devnet connection
+        let rpc_client = RpcClient::new(RPC_URL);
+
+        // Let's define our accounts
+        let signer = read_keypair_file("Turbin3-wallet.json").expect("Couldn't find wallet file");
+
+        let prereq = TurbinePrereqProgram::derive_program_address(&[b"prereq",signer.pubkey().to_bytes().as_ref()]);
+
+        // Define our instruction data 
+        let args = CompleteArgs {github: b"hopplers".to_vec() };
+
+        // Get recent blockhash
+        let blockhash = rpc_client .get_latest_blockhash() .expect("Failed to get recent blockhash");
+
+        // Get recent blockhash
+        let blockhash = rpc_client .get_latest_blockhash() .expect("Failed to get recent
+        blockhash");
+
+        // Now we can invoke the "complete" function 
+        let transaction =TurbinePrereqProgram::complete(
+            &[&signer.pubkey(), &prereq, &system_program::id()], &args, 
+            Some(&signer.pubkey()),
+            &[&signer],blockhash 
+        );
+
+        // Send the transaction
+        let signature = rpc_client .send_and_confirm_transaction(&transaction) .expect("Failed to send transaction");
+
+        // Print our transaction out 
+        println!("Success! Check out your TX here: https://explorer.solana.com/tx/{}/?cluster=devnet", signature);
     }
     }
